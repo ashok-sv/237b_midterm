@@ -4,23 +4,34 @@ __author__ = 'Ashok Vydyanathan'
 import sys
 import select
 import threading
-import queue
+import Queue
 
-radarQ = queue.Queue()
+PROXIMITY = 1000
+SPEED = 200
+MAX_TRACKS = 200
+
+radarQ = Queue.Queue()
 running = True
+updateCount = 0
 
 def radarCallback():
     count = 0
     while(running):
         count = count + 1
         if count == 100000000:
-            radarQ.put('Radar Update Recieved')
+            radarQ.put('Radar Update Received')
             count = 0
 
 def updateATCS():
-    print('ATCS Updated')
     if not radarQ.empty():
         print(radarQ.get())
+
+    global updateCount
+    updateCount += 1
+    if updateCount == 5:
+        updateCount = 0
+        print('Display Tracks')
+
     renewTimer = threading.Timer(1.0, updateATCS)
     renewTimer.daemon = True
     renewTimer.start()
