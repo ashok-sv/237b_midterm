@@ -13,6 +13,8 @@ MAX_TRACKS = 200
 radarQ = Queue.Queue()
 running = True
 updateCount = 0
+currentTracks = []
+numTracks = 0
 
 def radarCallback():
     count = 0
@@ -27,14 +29,40 @@ def updateATCS():
         print(radarQ.get())
 
     global updateCount
+    updateTracks()
     updateCount += 1
     if updateCount == 5:
         updateCount = 0
-        print('Display Tracks')
+        #print('Display Tracks')
+        displayTracks()
 
     renewTimer = threading.Timer(1.0, updateATCS)
     renewTimer.daemon = True
     renewTimer.start()
+
+def displayTracks():
+    if currentTracks:
+        print('Tracking ' + str(len(currentTracks)) + ' planes')
+        for track in currentTracks:
+            print('Track: ' + str(track['Track']) + '  X: ' + str(track['X']) + '  Y: ' + str(track['Y']))
+    else:
+        print('No current tracks')
+
+def correlateTrack(trackOne, trackTwo):
+    diffX = trackOne['X'] - trackTwo['X']
+    diffY = trackOne['Y'] - trackTwo['Y']
+    dist = ((diffX ** 2) + (diffY ** 2)) ** (0.5)
+    if (dist<=PROXIMITY):
+        return True
+    else:
+        return False
+
+def updateTracks():
+    if currentTracks:
+        print('Updating tracks')
+        for track in currentTracks:
+            track['X'] += SPEED
+            track['Y'] += SPEED
 
 # setup and start radar thread
 radarThread = threading.Thread(target=radarCallback)
@@ -52,6 +80,19 @@ while running:
         s = sys.stdin.readline()
         if s == 'q\n':
             running = False
+        else:
+            newPlane = s.strip('\t\n\r')
+            newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
+            if (len(newXY) != 2):
+                print('Invalid entry')
+            else:
+                #print('New plane is at: ' + str(newXY[0]) + ',' + str(newXY[1]))
+                if (numTracks < MAX_TRACKS):
+                    newTrack = {'Track':numTracks, 'X':newXY[0], 'Y':newXY[1]}
+                    currentTracks.append(newTrack)
+                    numTracks += 1
+                else:
+                    print('Track limit reached')
 
 
 print('Exiting ATCS')
