@@ -21,12 +21,24 @@ def radarCallback():
     while(running):
         count = count + 1
         if count == 100000000:
-            radarQ.put('Radar Update Received')
+            radarQ.put('4000 4500')
             count = 0
 
 def updateATCS():
-    if not radarQ.empty():
-        print(radarQ.get())
+    while (not radarQ.empty()):
+        #print(radarQ.get())
+        newPlane = radarQ.get()
+        newPlane = newPlane.strip('/r/n/t')
+        newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
+        if (len(newXY) != 2):
+                print('Invalid radar data')
+        else:
+            corrTrack = {'Track':201, 'X':newXY[0], 'Y':newXY[1]}
+            for track in currentTracks:
+                if (correlateTrack(track, corrTrack)):
+                    track['X'] = corrTrack['X']
+                    track['Y'] = corrTrack['Y']
+                    break
 
     global updateCount
     updateTracks()
