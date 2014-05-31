@@ -16,24 +16,29 @@ updateCount = 0
 currentTracks = []
 numTracks = 0
 
+# this is the main simulation thread (?) 
 def radarCallback():
     count = 0
     while(running):
         count = count + 1
+	# roughly 4 seconds on ieng6
         if count == 100000000:
             radarQ.put('4000 4500')
             count = 0
 
+# main update function for all tracks
+# either updates track by default (x,y+=200) or checks correlation with radar queue, if any
 def updateATCS():
     while (not radarQ.empty()):
         #print(radarQ.get())
+	print("Radar input received")
         newPlane = radarQ.get()
         newPlane = newPlane.strip('/r/n/t')
         newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
         if (len(newXY) != 2):
                 print('Invalid radar data')
         else:
-            corrTrack = {'Track':201, 'X':newXY[0], 'Y':newXY[1]}
+            corrTrack = {'Track':2001, 'X':newXY[0], 'Y':newXY[1]}
             for track in currentTracks:
                 if (correlateTrack(track, corrTrack)):
                     track['X'] = corrTrack['X']
@@ -54,7 +59,7 @@ def updateATCS():
 
 def displayTracks():
     if currentTracks:
-        print('Tracking ' + str(len(currentTracks)) + ' planes')
+        print('Tracking ' + str(len(currentTracks)) + ' plane(s)')
         for track in currentTracks:
             print('Track: ' + str(track['Track']) + '  X: ' + str(track['X']) + '  Y: ' + str(track['Y']))
     else:
@@ -95,12 +100,12 @@ while running:
         else:
             newPlane = s.strip('\t\n\r')
             newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
-            if (len(newXY) != 2):
+            if (len(newXY) != 3):
                 print('Invalid entry')
             else:
                 #print('New plane is at: ' + str(newXY[0]) + ',' + str(newXY[1]))
                 if (numTracks < MAX_TRACKS):
-                    newTrack = {'Track':numTracks, 'X':newXY[0], 'Y':newXY[1]}
+                    newTrack = {'Track':newXY[0], 'X':newXY[1], 'Y':newXY[2]}
                     currentTracks.append(newTrack)
                     numTracks += 1
                 else:
