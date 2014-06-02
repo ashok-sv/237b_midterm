@@ -18,33 +18,25 @@ numTracks = 0
 
 # this is the main simulation thread (?) 
 def radarCallback():
-    count = 0
-    while(running):
-        count = count + 1
-	# roughly 4 seconds on ieng6
-        if count == 100000000:
-            radarQ.put('4000 4500')
-            count = 0
-
-# main update function for all tracks
-# either updates track by default (x,y+=200) or checks correlation with radar queue, if any
-def updateATCS():
-    while (not radarQ.empty()):
-        #print(radarQ.get())
-	print("Radar input received")
-        newPlane = radarQ.get()
-        newPlane = newPlane.strip('/r/n/t')
-        newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
+    while running:
+        newRadar = radarQ.get()
+        print('Radar input received')
+        newRadar = newRadar.strip('/r/n/t')
+        XY = [int(s) for s in newRadar.split(' ') if s.isdigit()]
         if (len(newXY) != 2):
                 print('Invalid radar data')
         else:
-            corrTrack = {'Track':2001, 'X':newXY[0], 'Y':newXY[1]}
+            corrTrack = {'Track':2001, 'X':XY[0], 'Y':XY[1]}
             for track in currentTracks:
-                if (correlateTrack(track, corrTrack)):
+                if correlateTrack(track, corrTrack):
+                    print('Track ' + str(track['Track']) + ' updated from radar')
                     track['X'] = corrTrack['X']
                     track['Y'] = corrTrack['Y']
                     break
 
+# main update function for all tracks
+# either updates track by default (x,y+=200) or checks correlation with radar queue, if any
+def updateATCS():
     global updateCount
     updateTracks()
     updateCount += 1
@@ -80,6 +72,9 @@ def updateTracks():
         for track in currentTracks:
             track['X'] += SPEED
             track['Y'] += SPEED
+            if track['X'] > 100000 or track['Y'] > 100000:
+                currentTracks.remove(track)
+                print('Track ' + str(track['Track']) + ' removed [out of range]')
 
 # setup and start radar thread
 radarThread = threading.Thread(target=radarCallback)
@@ -100,16 +95,19 @@ while running:
         else:
             newPlane = s.strip('\t\n\r')
             newXY = [int(s) for s in newPlane.split(' ') if s.isdigit()]
-            if (len(newXY) != 3):
+            if (len(newXY) != 3 and len(newXY) != 2):
                 print('Invalid entry')
             else:
-                #print('New plane is at: ' + str(newXY[0]) + ',' + str(newXY[1]))
-                if (numTracks < MAX_TRACKS):
-                    newTrack = {'Track':newXY[0], 'X':newXY[1], 'Y':newXY[2]}
-                    currentTracks.append(newTrack)
-                    numTracks += 1
+                if len(newXY) == 3:
+                    #print('New plane is at: ' + str(newXY[0]) + ',' + str(newXY[1]))
+                    if (numTracks < MAX_TRACKS):
+                        newTrack = {'Track':newXY[0], 'X':newXY[1], 'Y':newXY[2]}
+                        currentTracks.append(newTrack)
+                        numTracks += 1
+                    else:
+                        print('Track limit reached')
                 else:
-                    print('Track limit reached')
+                    radarQ.put(str(newXY[0]) + ' ' + str(newXY[1]))
 
 
 print('Exiting ATCS')
