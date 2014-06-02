@@ -75,6 +75,7 @@ def updateTracks():
             if track['X'] > 100000 or track['Y'] > 100000:
                 currentTracks.remove(track)
                 print('Track ' + str(track['Track']) + ' removed [out of range]')
+                numTracks = numTracks - 1
 
 # setup and start radar thread
 radarThread = threading.Thread(target=radarCallback)
